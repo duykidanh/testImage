@@ -1,0 +1,387 @@
+public class MainActivity3 extends AppCompatActivity {
+
+    ActivityMain3Binding binding;
+
+    boolean flag = true;
+    ExecutorService executorService;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        binding = ActivityMain3Binding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
+        executorService = Executors.newSingleThreadExecutor();
+        addEvents();
+    }
+
+    public void addEvents(){
+        binding.confirmButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                flag = true;
+                binding.linearLayout.removeAllViews();
+                executeLongRunningTask();
+            }
+        });
+    }
+
+    public void executeLongRunningTask() {
+        //background
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+
+                int numOfViews = Integer.parseInt(binding.editText.getText().toString());
+                Random random = new Random();
+
+                for (int i=1; i<=numOfViews; ++i){
+                    int percent, randNum;
+                    randNum = random.nextInt(100);
+                    percent = i*100/numOfViews;
+
+                    binding.scrollBar.setProgress(percent);
+
+                    //foregroundUI
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            int numOfChilds = binding.linearLayout.getChildCount();
+                            if (numOfChilds == 0) {
+                                LinearLayout newLayout = createNewView(randNum, flag);
+                                binding.linearLayout.addView(newLayout);
+                            }
+                            else {
+                                View view = binding.linearLayout.getChildAt(numOfChilds - 1);
+                                if (view instanceof LinearLayout){
+                                    LinearLayout childView = (LinearLayout) view;
+                                    int max = flag?3:2;
+                                    if(childView.getChildCount() < max) {
+                                        TextView child = createNewTextView(randNum, flag, childView.getChildCount());
+                                        childView.addView(child);
+                                    }
+                                    else {
+                                        flag = !flag;
+                                        LinearLayout newLayout = createNewView(randNum, flag);
+                                        binding.linearLayout.addView(newLayout);
+                                    }
+                                }
+
+                            }
+
+
+                        }
+                    });
+
+                    try {
+                        Thread.sleep(100);
+                    }
+                    catch (Exception e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            }
+        });
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (executorService != null){
+            executorService.shutdown();
+        }
+    }
+
+    public LinearLayout createNewView(int randNum, boolean flag) {
+        LinearLayout layout = new LinearLayout(MainActivity3.this);
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        layout.setLayoutParams(layoutParams);
+        layout.setOrientation(LinearLayout.HORIZONTAL);
+        layout.setWeightSum(4.0f);
+        TextView textView = createNewTextView(randNum, flag, 0);
+        layout.addView(textView);
+        return layout;
+    };
+
+    public TextView createNewTextView(int randNum, boolean flag, int childCount) {
+        TextView textView = new TextView(MainActivity3.this);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, 200);
+        if(flag == false) {
+            params.weight = 2.0f;
+            textView.setBackgroundColor(Color.GREEN);
+        }
+        else {
+
+            if(childCount == 0 || childCount == 2) {
+                textView.setBackgroundColor(Color.YELLOW);
+                params.weight = 1.0f;
+            }
+            else{
+                textView.setBackgroundColor(Color.RED);
+                params.weight = 2.0f;
+            }
+        }
+        textView.setLayoutParams(params);
+        textView.setTextColor(Color.BLACK);
+        textView.setTextSize(30);
+        textView.setText("" + randNum);
+        textView.setGravity(Gravity.CENTER);
+        return textView;
+    }
+}
+
+package com.huynhnguyenanhduy.Database;
+
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteStatement;
+
+import androidx.annotation.Nullable;
+
+public class ProductDB extends SQLiteOpenHelper {
+
+    public static final String DB_NAME = "products.sqlite";
+    public static final int DB_VERSION = 1;
+    public static final String TB_NAME = "Product";
+    public static final String COL_MASP = "MaSanPham";
+    public static final String COL_TENSP = "TenSanPham";
+    public static final String COL_GIASP = "GiaBan";
+    public ProductDB(@Nullable Context context) {
+        super(context, DB_NAME, null, DB_VERSION);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        String sql = "CREATE TABLE IF NOT EXISTS " + TB_NAME + " ("
+                + COL_MASP + " NVARCHAR(50), "
+                + COL_TENSP + " NVARCHAR(50), "
+                + COL_GIASP + " REAL )";
+        db.execSQL(sql);
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int i, int i1) {
+        db.execSQL("DROP TABLE IF EXISTS " + TB_NAME);
+        onCreate(db);
+    }
+
+    //Get Data
+    public Cursor GetData(String sql) {
+        Cursor cursor = null;
+        try {
+            SQLiteDatabase db = getReadableDatabase();
+            cursor = db.rawQuery(sql, null);
+        }catch (Exception e) {
+
+        }
+        return cursor;
+    }
+
+    //update, delete
+    public boolean execSQL(String sql) {
+        try {
+            SQLiteDatabase db = getWritableDatabase();
+            db.execSQL(sql);
+
+            return true;
+        }catch (Exception e) {
+            return false;
+        }
+    }
+
+    //insert
+    public boolean insertData(String maSP, String tenSP, double giaSP) {
+        String sql = "INSERT INTO " + TB_NAME + " VALUES(?, ?, ?)";
+        try{
+            SQLiteDatabase db = getWritableDatabase();
+            db.execSQL(sql);
+
+            SQLiteStatement statement = db.compileStatement(sql);
+            statement.clearBindings();
+            statement.bindString(1, maSP);
+            statement.bindString(2, tenSP);
+            statement.bindDouble(3, giaSP);
+
+            statement.executeInsert();
+
+            return true;
+        }catch (Exception e) {
+            return false;
+        }
+    }
+}
+
+package com.huynhnguyenanhduy.myapplication;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.app.Dialog;
+import android.database.Cursor;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.os.Bundle;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import com.huynhnguyenanhduy.Database.ProductDB;
+import com.huynhnguyenanhduy.Model.Product;
+import com.huynhnguyenanhduy.myapplication.databinding.ActivityMainBinding;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity {
+
+    ActivityMainBinding binding;
+    ProductDB db;
+    List<Product> productList;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
+        addEvents();
+    }
+
+    public void loadData(){
+        db = new ProductDB(MainActivity.this);
+        productList = new ArrayList<>();
+        ArrayList<String> products = new ArrayList<>();
+        Cursor cursor = db.GetData("SELECT * FROM " + db.TB_NAME);
+        while (cursor.moveToNext()){
+            Product product = new Product(cursor.getString(0), cursor.getString(1), cursor.getDouble(2));
+            productList.add(product);
+            products.add(product.toString());
+        }
+
+        ArrayAdapter adapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_list_item_1, products);
+        binding.listView.setAdapter(adapter);
+    }
+
+    public void addEvents(){
+        binding.listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long l) {
+                Dialog dialog = new Dialog(MainActivity.this);
+                dialog.setContentView(R.layout.dialog_item);
+
+                Button cf_button = (Button) dialog.findViewById(R.id.button_confirm);
+                Button ex_button = (Button) dialog.findViewById(R.id.button_exit);
+                Button bk_button = (Button) dialog.findViewById(R.id.button_back);
+
+                EditText txtMaSP = (EditText) dialog.findViewById(R.id.txtID);
+                EditText txtTenSP = (EditText) dialog.findViewById(R.id.txtName);
+                EditText txtGiaSP = (EditText) dialog.findViewById(R.id.txtPrice);
+
+                cf_button.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        String maSP = txtMaSP.getText().toString();
+                        String tenSP = txtTenSP.getText().toString();
+                        double giaSP = Double.parseDouble(txtGiaSP.getText().toString());
+
+                        try {
+                            db.insertData(maSP, tenSP, giaSP);
+                            Toast.makeText(MainActivity.this, "Insert Complete", Toast.LENGTH_SHORT).show();
+                            dialog.dismiss();
+                            onResume();
+                        }catch (Exception e) {
+                            Toast.makeText(MainActivity.this, "Insert Failed", Toast.LENGTH_SHORT).show();
+                        }
+                        CreateData();
+                    }
+                });
+
+                bk_button.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        dialog.dismiss();
+                    }
+                });
+
+                ex_button.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        dialog.dismiss();
+                    }
+                });
+
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                dialog.getWindow().setGravity(Gravity.BOTTOM);
+                dialog.show();
+                return true;
+            }
+        });
+
+        binding.btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Dialog dialog = new Dialog(MainActivity.this);
+                dialog.setContentView(R.layout.dialog_item);
+
+                Button cf_button = (Button) dialog.findViewById(R.id.button_confirm);
+                Button ex_button = (Button) dialog.findViewById(R.id.button_exit);
+                Button bk_button = (Button) dialog.findViewById(R.id.button_back);
+
+                EditText txtMaSP = (EditText) dialog.findViewById(R.id.txtID);
+                EditText txtTenSP = (EditText) dialog.findViewById(R.id.txtName);
+                EditText txtGiaSP = (EditText) dialog.findViewById(R.id.txtPrice);
+
+                cf_button.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        String maSP = txtMaSP.getText().toString();
+                        String tenSP = txtTenSP.getText().toString();
+                        double giaSP = Double.parseDouble(txtGiaSP.getText().toString());
+
+                        try {
+                            db.insertData(maSP, tenSP, giaSP);
+                            Toast.makeText(MainActivity.this, "Insert Complete", Toast.LENGTH_SHORT).show();
+                        }catch (Exception e) {
+                            Toast.makeText(MainActivity.this, "Insert Failed", Toast.LENGTH_SHORT).show();
+                        }
+                        CreateData();
+                    }
+                });
+
+                bk_button.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        dialog.dismiss();
+                    }
+                });
+
+                ex_button.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        dialog.dismiss();
+                    }
+                });
+
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                dialog.getWindow().setGravity(Gravity.BOTTOM);
+                dialog.show();
+            }
+        });
+    }
+
+    public void CreateData() {
+
+    }
+    @Override
+    protected void onResume() {
+        loadData();
+        super.onResume();
+    }
+}
