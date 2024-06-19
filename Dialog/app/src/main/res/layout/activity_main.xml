@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity"
+    android:orientation="vertical">
+
+    <Button
+        android:id="@+id/btnToast"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="BUTTON TOAST"/>
+    <Button
+        android:id="@+id/btnAlert"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="BUTTON ALERT"
+        android:backgroundTint="@color/black"/>
+
+    <Button
+        android:id="@+id/btnCustom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="BUTTON CUSTOM"
+        android:backgroundTint="#009688"/>
+
+    <Button
+        android:id="@+id/btnCustomSheet"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="BOTTOM SHEET"
+        android:backgroundTint="#F44336"/>
+</LinearLayout>
